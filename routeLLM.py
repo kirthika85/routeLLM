@@ -57,13 +57,14 @@ async def get_response_from_model(prompt, model_name):
     try:
         if model_name == "gpt-4o":
             # Use OpenAI API for GPT-4o
-            response = openai.Completion.create(
+            client = openai.OpenAI()
+            response = client.chat.completions.create(
                 model="gpt-4o",
-                prompt=prompt,
+                messages=[{"role": "user", "content": prompt}],
                 max_tokens=1024,
                 temperature=0.7,
             )
-            return response.choices[0].text, model_name
+            return response.choices[0].message.content, model_name
         elif model_name == "claude-3-haiku-20240307":
             # Use Anthropic API for Claude
             client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
