@@ -69,7 +69,6 @@ async def get_response_from_model(prompt, model_name):
 
 # Streamlit App
 st.title("LLM Router Application")
-st.set_page_config(layout="wide")
 
 selected_models = st.multiselect("Select Models", list(models.keys()) + ["RouteLLM Router"])
 
