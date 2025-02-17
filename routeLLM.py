@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import openai
 from routellm.controller import Controller
 
 with st.spinner("🔄 Payer agent Authentication In progress..."):
