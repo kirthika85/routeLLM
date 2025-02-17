@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import openai
 from routellm.controller import Controller
+import time
 
 with st.spinner("🔄 Payer agent Authentication In progress..."):
     openai.api_key = os.environ.get("OPENAI_API_KEY")
