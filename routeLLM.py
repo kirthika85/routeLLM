@@ -62,6 +62,8 @@ def select_model(prompt, max_cost, willingness_to_pay):
 # Streamlit App
 st.title("LLM Router Application")
 
+selected_model = st.selectbox("Select a Model", list(models.keys()) + ["RouteLLM Router"])
+
 # Input prompt
 prompt = st.text_area("Enter your prompt:", height=100)
 
