@@ -69,15 +69,17 @@ prompt = st.text_area("Enter your prompt:", height=100)
 
 # Button to generate response
 if st.button("Get Response"):
-    response, model_used = get_response(prompt)
-    
-    st.write("Response:")
-    st.write(response)
-    
-    if model_used:
+    if selected_model == "RouteLLM Router":
+        response, model_used = get_response(prompt)
+        st.write("Response:")
+        st.write(response)
         st.write(f"Routed to: {model_used}")
     else:
-        st.write("Failed to determine the routed model.")
+        # Simulate using the selected model directly
+        response = f"Simulated response from {selected_model}: {prompt} processed."
+        st.write("Response:")
+        st.write(response)
+        st.write(f"Used Model: {selected_model}")
 
 # Optional: Display model details
 if st.checkbox("Show Model Details"):
