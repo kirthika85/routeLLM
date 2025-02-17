@@ -68,10 +68,6 @@ selected_model = st.selectbox("Select a Model", list(models.keys()) + ["RouteLLM
 # Input prompt
 prompt = st.text_area("Enter your prompt:", height=100)
 
-# Parameters
-max_cost = st.number_input("Max Cost (USD):", min_value=0.0, value=0.02)
-willingness_to_pay = st.number_input("Willingness to Pay (USD):", min_value=0.0, value=0.01)
-
 # Button to generate response
 if st.button("Get Response"):
     response, model_used = get_response(prompt)
