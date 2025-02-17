@@ -2,8 +2,8 @@ import streamlit as st
 import os
 import openai
 from routellm.controller import Controller
-import asyncio
 import time
+from anthropic import Anthropic
 
 with st.spinner("🔄 Mool AI agent Authentication In progress..."):
     openai.api_key = os.environ.get("OPENAI_API_KEY")
@@ -53,17 +53,30 @@ def get_response(prompt):
         return f"Error: {e}", None
 
 # Function to get a response from a specific model
-async def get_response_from_model(prompt, model_name):
+def get_response_from_model(prompt, model_name):
     try:
-        # Simulate using a specific model (replace with actual API call)
         if model_name == "gpt-4o":
-            response = f"GPT-4o Response: {prompt} is a question about AI. AI refers to the simulation of human intelligence in machines."
+            # Use OpenAI API for GPT-4o
+            response = openai.Completion.create(
+                model="gpt-4o",
+                prompt=prompt,
+                max_tokens=1024,
+                temperature=0.7,
+            )
+            return response.choices[0].text, model_name
         elif model_name == "claude-3-haiku-20240307":
-            response = f"Claude Response: {prompt} is about AI, which involves machines mimicking human thought processes."
+            # Use Anthropic API for Claude
+            client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+            message = client.messages.create(
+                model="claude-3-haiku@20240307",  # Ensure the correct model version
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return message.content, model_name
         else:
+            # Simulate response for other models
             response = f"Simulated response from {model_name}: {prompt} processed."
-        
-        return response, model_name
+            return response, model_name
     except Exception as e:
         return f"Error: {e}", None
 
