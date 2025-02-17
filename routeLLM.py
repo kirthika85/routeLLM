@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import openai
 from routellm.controller import Controller
+import asyncio
 import time
 
 with st.spinner("🔄 Mool AI agent Authentication In progress..."):
@@ -51,42 +52,40 @@ def get_response(prompt):
     except Exception as e:
         return f"Error: {e}", None
 
-# Function to select a model based on cost parameters
-def select_model(prompt, max_cost, willingness_to_pay):
-    # Simplified logic: Select a cheaper model if max_cost is low
-    if max_cost < 0.01:
-        return "jamba-1.5-mini"
-    else:
-        return "claude-3-haiku-20240307"
+# Function to get a response from a specific model
+async def get_response_from_model(prompt, model_name):
+    try:
+        # Simulate using a specific model (replace with actual API call)
+        if model_name == "gpt-4o":
+            response = f"GPT-4o Response: {prompt} is a question about AI. AI refers to the simulation of human intelligence in machines."
+        elif model_name == "claude-3-haiku-20240307":
+            response = f"Claude Response: {prompt} is about AI, which involves machines mimicking human thought processes."
+        else:
+            response = f"Simulated response from {model_name}: {prompt} processed."
+        
+        return response, model_name
+    except Exception as e:
+        return f"Error: {e}", None
 
 # Streamlit App
 st.title("LLM Router Application")
+st.set_page_config(layout="wide")
 
-selected_model = st.selectbox("Select a Model", list(models.keys()) + ["RouteLLM Router"])
+selected_models = st.multiselect("Select Models", list(models.keys()) + ["RouteLLM Router"])
 
 # Input prompt
 prompt = st.text_area("Enter your prompt:", height=100)
 
 # Button to generate response
 if st.button("Get Response"):
-    if selected_model == "RouteLLM Router":
-        response, model_used = get_response(prompt)
-        st.write("Response:")
-        st.write(response)
-        st.write(f"Routed to: {model_used}")
-    else:
-        # Simulate using the selected model directly
-        response = f"Simulated response from {selected_model}: {prompt} processed."
-        st.write("Response:")
-        st.write(response)
-        st.write(f"Used Model: {selected_model}")
-
-# Optional: Display model details
-if st.checkbox("Show Model Details"):
-    st.write("Model Details:")
-    for model, details in models.items():
-        st.write(f"Model: {model}")
-        st.write(f"Vendor: {details['vendor']}")
-        st.write(f"Cost per Prompt: {details['cost_per_prompt']}")
-        st.write(f"Cost per Completion: {details['cost_per_completion']}")
-        st.write("----")
+    columns = st.columns(len(selected_models))
+    
+    for i, model in enumerate(selected_models):
+        if model == "RouteLLM Router":
+            response, model_used = get_response(prompt)
+            columns[i].write(f"Response from {model_used}:")
+            columns[i].write(response)
+        else:
+            response, model_used = asyncio.run(get_response_from_model(prompt, model))
+            columns[i].write(f"Response from {model_used}:")
+            columns[i].write(response)
