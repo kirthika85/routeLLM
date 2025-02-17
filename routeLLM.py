@@ -53,7 +53,7 @@ def get_response(prompt):
         return f"Error: {e}", None
 
 # Function to get a response from a specific model
-def get_response_from_model(prompt, model_name):
+async get_response_from_model(prompt, model_name):
     try:
         if model_name == "gpt-4o":
             # Use OpenAI API for GPT-4o
