@@ -1,6 +1,18 @@
 import streamlit as st
 from routellm.controller import Controller
 
+with st.spinner("🔄 Payer agent Authentication In progress..."):
+    openai.api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai.api_key:
+        st.error("❌ API_KEY not found in environment variables.")
+        st.stop()
+    time.sleep(5)
+st.success("✅ Payer agent Authentication Successful")
+
+if openai.api_key is None:
+    st.error("OPENAI_API_KEY environment variable is not set. Please set it before running the app.")
+    st.stop()
+
 # Define models and parameters
 models = {
     "jamba-1.5-mini": {"vendor": "ai21", "cost_per_prompt": 2e-7, "cost_per_completion": 4e-7},
