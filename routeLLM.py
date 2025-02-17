@@ -37,19 +37,19 @@ client = Controller(
 )
 
 # Function to get a response from the router
-def get_response(prompt, model=None):
+def get_response(prompt):
     try:
-        if model:
-            # Simulate using a specific model (replace with actual API call)
-            return f"Response from {model}: {prompt} processed."
-        else:
-            response = client.chat.completions.create(
-                model="router-mf-0.11593",  # Specify the router model with cost threshold
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return response.choices[0]["message"]["content"]
+        response = client.chat.completions.create(
+            model="router-mf-0.11593",  # Specify the router model with cost threshold
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        # log the model used
+        model_used = "RouteLLM Router"  # Default to router for now
+        
+        return response.choices[0]["message"]["content"], model_used
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error: {e}", None
 
 # Function to select a model based on cost parameters
 def select_model(prompt, max_cost, willingness_to_pay):
@@ -74,13 +74,15 @@ willingness_to_pay = st.number_input("Willingness to Pay (USD):", min_value=0.0,
 
 # Button to generate response
 if st.button("Get Response"):
-    if selected_model == "RouteLLM Router":
-        response = get_response(prompt)
-    else:
-        response = get_response(prompt, selected_model)
+    response, model_used = get_response(prompt)
     
     st.write("Response:")
     st.write(response)
+    
+    if model_used:
+        st.write(f"Routed to: {model_used}")
+    else:
+        st.write("Failed to determine the routed model.")
 
 # Optional: Display model details
 if st.checkbox("Show Model Details"):
