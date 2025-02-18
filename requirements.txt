@@ -2,4 +2,3 @@ streamlit
 openai
 routellm[serv,eval]
 anthropic
-bert
