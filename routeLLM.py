@@ -31,12 +31,18 @@ st.title("LLM Router Application")
 # Function to calculate cost
 def calculate_cost(model_name, input_tokens, output_tokens):
     if model_name == "gpt-4o":
-        return (input_tokens + output_tokens) * 5 / 1e6
+        st.write("Input Token length:", input_tokens)
+        st.write("Output Token length:", output_tokens)
+        return (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
     elif model_name == "claude-3-haiku-20240307":
-        return (input_tokens * 0.8 + output_tokens * 4) / 1e6
+        st.write("Input Token length:", input_tokens)
+        st.write("Output Token length:", output_tokens)
+        return (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
     elif model_name.startswith("RouteLLM Router"):
-        strong_model_cost = (input_tokens + output_tokens) * 5 / 1e6
-        weak_model_cost = (input_tokens * 0.8 + output_tokens * 4) / 1e6
+        st.write("Input Token length:", input_tokens)
+        st.write("Output Token length:", output_tokens)
+        strong_model_cost = (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
+        weak_model_cost = (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
         return (strong_model_cost + weak_model_cost) / 2
     else:
         return 0
