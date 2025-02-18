@@ -21,6 +21,8 @@ if openai.api_key is None:
 models = {
     "claude-3-haiku-20240307": {"vendor": "anthropic", "cost_per_prompt": 2.5e-7, "cost_per_completion": 1.25e-6},
     "gpt-4o": {"vendor": "openai", "cost_per_prompt": 5e-6, "cost_per_completion": 1.5e-5},
+    "RouteLLM Router (MF)": {"vendor": "routellm", "cost_per_prompt": 0, "cost_per_completion": 0},
+    "RouteLLM Router (BERT)": {"vendor": "routellm", "cost_per_prompt": 0, "cost_per_completion": 0},
 }
 
 # Streamlit App
@@ -40,10 +42,10 @@ def calculate_cost(model_name, input_tokens, output_tokens):
         return 0
 
 # Function to get a response from the RouteLLM router
-def get_response(prompt, selected_router):
+def get_response(prompt, router):
     try:
         client = Controller(
-            routers=[selected_router],
+            routers=[router],
             strong_model="gpt-4o",
             weak_model="claude-3-haiku-20240307",
             config={
@@ -53,13 +55,13 @@ def get_response(prompt, selected_router):
         )
         start_time = time.time()
         response = client.chat.completions.create(
-            model=f"router-{selected_router}-0.11593",
+            model=f"router-{router}-0.11593",
             messages=[{"role": "user", "content": prompt}]
         )
         end_time = time.time()
         latency = end_time - start_time
-        cost = calculate_cost(f"RouteLLM Router ({selected_router.upper()})", len(prompt), len(response.choices[0]["message"]["content"]))
-        return response.choices[0]["message"]["content"], f"RouteLLM Router ({selected_router.upper()})", latency, cost
+        cost = calculate_cost(f"RouteLLM Router ({router.upper()})", len(prompt), len(response.choices[0]["message"]["content"]))
+        return response.choices[0]["message"]["content"], f"RouteLLM Router ({router.upper()})", latency, cost
     except Exception as e:
         return f"Error: {e}", None, None, None
 
@@ -89,6 +91,9 @@ def get_response_from_model(prompt, model_name):
             latency = end_time - start_time
             cost = calculate_cost(model_name, len(prompt), len(message.content))
             return message.content, model_name, latency, cost
+        elif model_name.startswith("RouteLLM Router"):
+            router = "mf" if model_name.endswith("(MF)") else "bert"
+            return get_response(prompt, router)
         else:
             end_time = time.time()
             latency = end_time - start_time
@@ -97,7 +102,7 @@ def get_response_from_model(prompt, model_name):
     except Exception as e:
         return f"Error: {e}", None, None, None
 
-selected_models = st.multiselect("Select Models", list(models.keys()) + ["RouteLLM Router"])
+selected_models = st.multiselect("Select Models", list(models.keys()))
 
 # Input prompt
 prompt = st.text_area("Enter your prompt:", height=100)
@@ -108,30 +113,16 @@ if st.button("Get Response"):
         columns = st.columns(len(selected_models))
         
         for i, model in enumerate(selected_models):
-            if model == "RouteLLM Router":
-                router_options = ["mf", "bert"]
-                selected_router = columns[i].selectbox("Select Router", router_options, key=f"router_{i}")
-                response, model_used, latency, cost = get_response(prompt, selected_router)
-                if response is not None and model_used is not None:
-                    columns[i].write(f"Response from {model_used}:")
-                    columns[i].write(response)
-                    if latency is not None:
-                        columns[i].write(f"Latency: {latency:.2f} seconds")
-                    if cost is not None:
-                        columns[i].write(f"Cost: ${cost:.4f}")
-                else:
-                    columns[i].write("Error: Unable to retrieve response.")
+            response, model_used, latency, cost = get_response_from_model(prompt, model)
+            if response is not None and model_used is not None:
+                columns[i].write(f"Response from {model_used}:")
+                columns[i].write(response)
+                if latency is not None:
+                    columns[i].write(f"Latency: {latency:.2f} seconds")
+                if cost is not None:
+                    columns[i].write(f"Cost: ${cost:.4f}")
             else:
-                response, model_used, latency, cost = get_response_from_model(prompt, model)
-                if response is not None and model_used is not None:
-                    columns[i].write(f"Response from {model_used}:")
-                    columns[i].write(response)
-                    if latency is not None:
-                        columns[i].write(f"Latency: {latency:.2f} seconds")
-                    if cost is not None:
-                        columns[i].write(f"Cost: ${cost:.4f}")
-                else:
-                    columns[i].write("Error: Unable to retrieve response.")
+                columns[i].write("Error: Unable to retrieve response.")
     except Exception as e:
         st.error(f"An error occurred: {e}")
                 
