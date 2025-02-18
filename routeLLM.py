@@ -4,7 +4,7 @@ import openai
 from routellm.controller import Controller
 import time
 from anthropic import Anthropic
-import asyncio
+
 with st.spinner("🔄 Mool AI agent Authentication In progress..."):
     openai.api_key = os.environ.get("OPENAI_API_KEY")
     if not openai.api_key:
@@ -28,8 +28,8 @@ models = {
 # Initialize RouteLLM Controller
 client = Controller(
     routers=["mf"],  # Specify which router to use
-    strong_model="gpt-4-1106-preview",  # Strong model for complex tasks
-    weak_model="anyscale/mistralai/Mixtral-8x7B-Instruct-v0.1",  # Weak model for simpler tasks
+    strong_model="gpt-4o",  # Strong model for complex tasks
+    weak_model="claude-3-haiku-20240307",  # Weak model for simpler tasks
     config={
         "mf": {
             "checkpoint_path": "routellm/mf_gpt4_augmented"  # Path to model checkpoint
@@ -37,76 +37,68 @@ client = Controller(
     }
 )
 
-# Function to get a response from the router
+# Function to calculate cost
+def calculate_cost(model_name, input_tokens, output_tokens):
+    if model_name == "gpt-4o":
+        return (input_tokens + output_tokens) * 5 / 1e6
+    elif model_name == "claude-3-haiku-20240307":
+        return (input_tokens * 0.8 + output_tokens * 4) / 1e6
+    elif model_name == "RouteLLM Router":
+        strong_model_cost = (input_tokens + output_tokens) * 5 / 1e6
+        weak_model_cost = (input_tokens * 0.8 + output_tokens * 4) / 1e6
+        return (strong_model_cost + weak_model_cost) / 2
+    else:
+        return 0
+
+# Function to get a response from the RouteLLM router
 def get_response(prompt):
     try:
+        start_time = time.time()
         response = client.chat.completions.create(
             model="router-mf-0.11593",  # Specify the router model with cost threshold
             messages=[{"role": "user", "content": prompt}]
         )
-        
-        # log the model used
-        model_used = "RouteLLM Router"  # Default to router for now
-        
-        return response.choices[0]["message"]["content"], model_used
+        end_time = time.time()
+        latency = end_time - start_time
+        cost = calculate_cost("RouteLLM Router", len(prompt), len(response.choices[0]["message"]["content"]))
+        return response.choices[0]["message"]["content"], "RouteLLM Router", latency, cost
     except Exception as e:
-        return f"Error: {e}", None
+        return f"Error: {e}", None, None, None
 
-# Function to get a response from a specific model
-async def get_response_from_model(prompt, model_name):
+# Function to get a response from a specific model (e.g., GPT-4o, Claude)
+def get_response_from_model(prompt, model_name):
     try:
+        start_time = time.time()
         if model_name == "gpt-4o":
-            # Use OpenAI API for GPT-4o
-            client = openai.OpenAI()
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=1024,
                 temperature=0.7,
             )
-            return response.choices[0].message.content, model_name
+            end_time = time.time()
+            latency = end_time - start_time
+            cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
+            return response.choices[0].message.content, model_name, latency, cost
         elif model_name == "claude-3-haiku-20240307":
-            # Use Anthropic API for Claude
             client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
             message = client.messages.create(
-                model="claude-3-haiku@20240307",  # Ensure the correct model version
+                model="claude-3-haiku@20240307",
                 max_tokens=1024,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return message.content, model_name
+            end_time = time.time()
+            latency = end_time - start_time
+            cost = calculate_cost(model_name, len(prompt), len(message.content))
+            return message.content, model_name, latency, cost
         else:
-            # Simulate response for other models
-            response = f"Simulated response from {model_name}: {prompt} processed."
-            return response, model_name
+            end_time = time.time()
+            latency = end_time - start_time
+            cost = 0
+            return f"Simulated response from {model_name}: {prompt} processed.", model_name, latency, cost
     except Exception as e:
-        return f"Error: {e}", None
+        return f"Error: {e}", None, None, None
 
-def calculate_cost(model_name, input_tokens, output_tokens):
-    if model_name == "gpt-4o":
-        # Assuming $5 per 1 million tokens with API key
-        # For simplicity, treat input and output tokens equally
-        return (input_tokens + output_tokens) * 5 / 1e6
-    elif model_name == "claude-3-haiku-20240307":
-        # Using the costs per million tokens for Claude 3.5 Haiku
-        return (input_tokens * 0.8 + output_tokens * 4) / 1e6
-    elif model_name == "RouteLLM Router":
-        # For simplicity, assume an average cost based on the models used by RouteLLM
-        # This could be a mix of strong and weak models
-        strong_model_cost = (input_tokens + output_tokens) * 5 / 1e6  # GPT-4o
-        weak_model_cost = (input_tokens * 0.8 + output_tokens * 4) / 1e6  # Claude 3.5 Haiku
-        # Assume 50% usage of strong model and 50% of weak model for simplicity
-        return (strong_model_cost + weak_model_cost) / 2
-    else:
-        return 0
-
-# Function to evaluate accuracy (simple example)
-def evaluate_accuracy(response, prompt):
-    # For demonstration purposes, assume accuracy is based on response length
-    if len(response) > 100:
-        return "High"
-    else:
-        return "Low"
-        
 # Streamlit App
 st.title("LLM Router Application")
 
@@ -121,29 +113,17 @@ if st.button("Get Response"):
     
     for i, model in enumerate(selected_models):
         if model == "RouteLLM Router":
-            start_time = time.time()
-            response, model_used = get_response(prompt)
-            end_time = time.time()
-            latency = end_time - start_time
-            cost = calculate_cost(model_used, len(prompt), len(response))
-            accuracy = evaluate_accuracy(response, prompt)
+            response, model_used, latency, cost = get_response(prompt)
             columns[i].write(f"Response from {model_used}:")
             columns[i].write(response)
             columns[i].write(f"Latency: {latency:.2f} seconds")
             columns[i].write(f"Cost: ${cost:.4f}")
-            columns[i].write(f"Accuracy: {accuracy}")
         else:
-            start_time = time.time()
-            response, model_used = asyncio.run(get_response_from_model(prompt, model))
-            end_time = time.time()
-            latency = end_time - start_time
-            cost = calculate_cost(model_used, len(prompt), len(response))
-            accuracy = evaluate_accuracy(response, prompt)
+            response, model_used, latency, cost = get_response_from_model(prompt, model)
             columns[i].write(f"Response from {model_used}:")
             columns[i].write(response)
             columns[i].write(f"Latency: {latency:.2f} seconds")
             columns[i].write(f"Cost: ${cost:.4f}")
-            columns[i].write(f"Accuracy: {accuracy}")
 
 # Optional: Display model details
 if st.checkbox("Show Model Details"):
