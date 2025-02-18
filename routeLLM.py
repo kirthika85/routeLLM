@@ -31,16 +31,10 @@ st.title("LLM Router Application")
 # Function to calculate cost
 def calculate_cost(model_name, input_tokens, output_tokens):
     if model_name == "gpt-4o":
-        st.write("Input Token length:", input_tokens)
-        st.write("Output Token length:", output_tokens)
         return (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
     elif model_name == "claude-3-haiku-20240307":
-        st.write("Input Token length:", input_tokens)
-        st.write("Output Token length:", output_tokens)
         return (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
     elif model_name.startswith("RouteLLM Router"):
-        st.write("Input Token length:", input_tokens)
-        st.write("Output Token length:", output_tokens)
         strong_model_cost = (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
         weak_model_cost = (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
         return (strong_model_cost + weak_model_cost) / 2
@@ -66,6 +60,8 @@ def get_response(prompt, router):
         )
         end_time = time.time()
         latency = end_time - start_time
+        input_tokens = len(prompt)
+        output_tokens = len(response.choices[0].message.content)
         cost = calculate_cost(f"RouteLLM Router ({router.upper()})", len(prompt), len(response.choices[0]["message"]["content"]))
         return response.choices[0]["message"]["content"], f"RouteLLM Router ({router.upper()})", latency, cost
     except Exception as e:
@@ -84,8 +80,10 @@ def get_response_from_model(prompt, model_name):
             )
             end_time = time.time()
             latency = end_time - start_time
+            input_tokens = len(prompt)
+            output_tokens = len(response.choices[0].message.content)
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
-            return response.choices[0].message.content, model_name, latency, cost
+            return response.choices[0].message.content, model_name, latency, cost,input_tokens, output_tokens
         elif model_name == "claude-3-haiku-20240307":
             client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
             message = client.messages.create(
@@ -95,8 +93,10 @@ def get_response_from_model(prompt, model_name):
             )
             end_time = time.time()
             latency = end_time - start_time
+            input_tokens = len(prompt)
+            output_tokens = len(message.content)
             cost = calculate_cost(model_name, len(prompt), len(message.content))
-            return message.content, model_name, latency, cost
+            return message.content, model_name, latency, cost,input_tokens, output_tokens
         elif model_name.startswith("RouteLLM Router"):
             router = "mf" if model_name.endswith("(MF)") else "bert"
             return get_response(prompt, router)
