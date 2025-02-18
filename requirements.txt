@@ -2,3 +2,5 @@ streamlit
 openai
 routellm[serv,eval]
 anthropic
+torch
+torchvision
