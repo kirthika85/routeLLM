@@ -109,40 +109,42 @@ prompt = st.text_area("Enter your prompt:", height=100)
 
 # Button to generate response
 if st.button("Get Response"):
-    columns = st.columns(len(selected_models))
-    
-    for i, model in enumerate(selected_models):
-        if model == "RouteLLM Router":
-            response, model_used, latency, cost = get_response(prompt)
-            if response is not None and model_used is not None:
-                columns[i].write(f"Response from {model_used}:")
-                columns[i].write(response)
-                if latency is not None:
-                   columns[i].write(f"Latency: {latency:.2f} seconds")
+    try:
+        columns = st.columns(len(selected_models))
+        
+        for i, model in enumerate(selected_models):
+            if model == "RouteLLM Router":
+                response, model_used, latency, cost = get_response(prompt)
+                if response is not None and model_used is not None:
+                    columns[i].write(f"Response from {model_used}:")
+                    columns[i].write(response)
+                    if latency is not None:
+                        columns[i].write(f"Latency: {latency:.2f} seconds")
+                    else:
+                        columns[i].write("Latency: Not available")
+                    if cost is not None:
+                        columns[i].write(f"Cost: ${cost:.4f}")
+                    else:
+                        columns[i].write("Cost: Not available")
                 else:
-                   columns[i].write("Latency: Not available")
-            
-                if cost is not None:
-                    columns[i].write(f"Cost: ${cost:.4f}")
-                else:
-                    columns[i].write("Cost: Not available")
+                    columns[i].write("Error: Unable to retrieve response.")
             else:
-                columns[i].write("Error: Unable to retrieve response.")
-        else:
-            response, model_used, latency, cost = get_response_from_model(prompt, model)
-            if response is not None and model_used is not None:
-                columns[i].write(f"Response from {model_used}:")
-                columns[i].write(response)
-                if latency is not None:
-                    columns[i].write(f"Latency: {latency:.2f} seconds")
+                response, model_used, latency, cost = get_response_from_model(prompt, model)
+                if response is not None and model_used is not None:
+                    columns[i].write(f"Response from {model_used}:")
+                    columns[i].write(response)
+                    if latency is not None:
+                        columns[i].write(f"Latency: {latency:.2f} seconds")
+                    else:
+                        columns[i].write("Latency: Not available")
+                    if cost is not None:
+                        columns[i].write(f"Cost: ${cost:.4f}")
+                    else:
+                        columns[i].write("Cost: Not available")
                 else:
-                    columns[i].write("Latency: Not available")
-                if cost is not None:
-                    columns[i].write(f"Cost: ${cost:.4f}")
-                else:
-                    columns[i].write("Cost: Not available")
-            else:
-                columns[i].write("Error: Unable to retrieve response.")
+                    columns[i].write("Error: Unable to retrieve response.")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
                 
 # Optional: Display model details
 if st.checkbox("Show Model Details"):
