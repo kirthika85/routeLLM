@@ -114,17 +114,36 @@ if st.button("Get Response"):
     for i, model in enumerate(selected_models):
         if model == "RouteLLM Router":
             response, model_used, latency, cost = get_response(prompt)
-            columns[i].write(f"Response from {model_used}:")
-            columns[i].write(response)
-            columns[i].write(f"Latency: {latency:.2f} seconds")
-            columns[i].write(f"Cost: ${cost:.4f}")
+            if response is not None and model_used is not None:
+                columns[i].write(f"Response from {model_used}:")
+                columns[i].write(response)
+                if latency is not None:
+                   columns[i].write(f"Latency: {latency:.2f} seconds")
+                else:
+                   columns[i].write("Latency: Not available")
+            
+                if cost is not None:
+                    columns[i].write(f"Cost: ${cost:.4f}")
+                else:
+                    columns[i].write("Cost: Not available")
+            else:
+                columns[i].write("Error: Unable to retrieve response.")
         else:
             response, model_used, latency, cost = get_response_from_model(prompt, model)
-            columns[i].write(f"Response from {model_used}:")
-            columns[i].write(response)
-            columns[i].write(f"Latency: {latency:.2f} seconds")
-            columns[i].write(f"Cost: ${cost:.4f}")
-
+            if response is not None and model_used is not None:
+                columns[i].write(f"Response from {model_used}:")
+                columns[i].write(response)
+                if latency is not None:
+                    columns[i].write(f"Latency: {latency:.2f} seconds")
+                else:
+                    columns[i].write("Latency: Not available")
+                if cost is not None:
+                    columns[i].write(f"Cost: ${cost:.4f}")
+                else:
+                    columns[i].write("Cost: Not available")
+            else:
+                columns[i].write("Error: Unable to retrieve response.")
+                
 # Optional: Display model details
 if st.checkbox("Show Model Details"):
     st.write("Model Details:")
