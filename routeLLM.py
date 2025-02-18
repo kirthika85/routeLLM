@@ -42,7 +42,7 @@ client = Controller(
             "checkpoint_path": "routellm/mf_gpt4_augmented"
         },
         "bert": {
-            "checkpoint_path": "path/to/bert/checkpoint"
+            "checkpoint_path": "bert-base-uncased"
         }
     }
 )
