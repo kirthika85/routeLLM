@@ -2,5 +2,5 @@ streamlit
 openai
 routellm[serv,eval]
 anthropic
-torch==2.5.1
-torchvision==0.15.0
+torch
+torchvision
