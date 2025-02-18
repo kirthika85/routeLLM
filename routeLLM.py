@@ -63,7 +63,7 @@ def get_response(prompt, router):
         input_tokens = len(prompt)
         output_tokens = len(response.choices[0].message.content)
         cost = calculate_cost(f"RouteLLM Router ({router.upper()})", len(prompt), len(response.choices[0]["message"]["content"]))
-        return response.choices[0]["message"]["content"], f"RouteLLM Router ({router.upper()})", latency, cost
+        return response.choices[0]["message"]["content"], f"RouteLLM Router ({router.upper()})", latency, cost,input_tokens,output_tokens
     except Exception as e:
         return f"Error: {e}", None, None, None
 
