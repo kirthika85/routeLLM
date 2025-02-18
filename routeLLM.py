@@ -81,6 +81,25 @@ async def get_response_from_model(prompt, model_name):
     except Exception as e:
         return f"Error: {e}", None
 
+def calculate_cost(model_name, input_tokens, output_tokens):
+    if model_name == "gpt-4o":
+        return (input_tokens * 0.005 + output_tokens * 0.015) / 1000
+    elif model_name == "claude-3-haiku-20240307":
+        return (input_tokens * 0.0025 + output_tokens * 0.00125) / 1000
+    elif model_name == "RouteLLM Router":
+        # For simplicity, assume an average cost
+        return (input_tokens * 0.002 + output_tokens * 0.006) / 1000
+    else:
+        return 0  # Simulated models
+
+# Function to evaluate accuracy (simple example)
+def evaluate_accuracy(response, prompt):
+    # For demonstration purposes, assume accuracy is based on response length
+    if len(response) > 100:
+        return "High"
+    else:
+        return "Low"
+        
 # Streamlit App
 st.title("LLM Router Application")
 
