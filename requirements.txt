@@ -1,7 +1,5 @@
-streamlit==1.24.1
-torch==2.0.1
-torchvision==0.15.2
-torchaudio==2.0.2
+streamlit
 openai
 routellm[serv,eval]
 anthropic
+bert
