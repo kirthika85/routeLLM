@@ -83,14 +83,21 @@ async def get_response_from_model(prompt, model_name):
 
 def calculate_cost(model_name, input_tokens, output_tokens):
     if model_name == "gpt-4o":
-        return (input_tokens * 0.005 + output_tokens * 0.015) / 1000
+        # Assuming $5 per 1 million tokens with API key
+        # For simplicity, treat input and output tokens equally
+        return (input_tokens + output_tokens) * 5 / 1e6
     elif model_name == "claude-3-haiku-20240307":
-        return (input_tokens * 0.0025 + output_tokens * 0.00125) / 1000
+        # Using the costs per million tokens for Claude 3.5 Haiku
+        return (input_tokens * 0.8 + output_tokens * 4) / 1e6
     elif model_name == "RouteLLM Router":
-        # For simplicity, assume an average cost
-        return (input_tokens * 0.002 + output_tokens * 0.006) / 1000
+        # For simplicity, assume an average cost based on the models used by RouteLLM
+        # This could be a mix of strong and weak models
+        strong_model_cost = (input_tokens + output_tokens) * 5 / 1e6  # GPT-4o
+        weak_model_cost = (input_tokens * 0.8 + output_tokens * 4) / 1e6  # Claude 3.5 Haiku
+        # Assume 50% usage of strong model and 50% of weak model for simplicity
+        return (strong_model_cost + weak_model_cost) / 2
     else:
-        return 0  # Simulated models
+        return 0
 
 # Function to evaluate accuracy (simple example)
 def evaluate_accuracy(response, prompt):
