@@ -19,33 +19,12 @@ if openai.api_key is None:
 
 # Define models and parameters
 models = {
-    "jamba-1.5-mini": {"vendor": "ai21", "cost_per_prompt": 2e-7, "cost_per_completion": 4e-7},
     "claude-3-haiku-20240307": {"vendor": "anthropic", "cost_per_prompt": 2.5e-7, "cost_per_completion": 1.25e-6},
     "gpt-4o": {"vendor": "openai", "cost_per_prompt": 5e-6, "cost_per_completion": 1.5e-5},
-    "llama3.1-8b": {"vendor": "meta-llama", "cost_per_prompt": 1e-7, "cost_per_completion": 1e-7},
 }
 
 # Streamlit App
 st.title("LLM Router Application")
-
-# Router selection
-router_options = ["mf", "bert"]
-selected_router = st.selectbox("Select Router", router_options)
-
-# Initialize RouteLLM Controller
-client = Controller(
-    routers=[selected_router],
-    strong_model="gpt-4o",
-    weak_model="claude-3-haiku-20240307",
-    config={
-        "mf": {
-            "checkpoint_path": "routellm/mf_gpt4_augmented"
-        },
-        "bert": {
-            "checkpoint_path": "bert-base-uncased"
-        }
-    }
-)
 
 # Function to calculate cost
 def calculate_cost(model_name, input_tokens, output_tokens):
@@ -63,6 +42,15 @@ def calculate_cost(model_name, input_tokens, output_tokens):
 # Function to get a response from the RouteLLM router
 def get_response(prompt, selected_router):
     try:
+        client = Controller(
+            routers=[selected_router],
+            strong_model="gpt-4o",
+            weak_model="claude-3-haiku-20240307",
+            config={
+                "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
+                "bert": {"checkpoint_path": "bert-base-uncased"}
+            }
+        )
         start_time = time.time()
         response = client.chat.completions.create(
             model=f"router-{selected_router}-0.11593",
@@ -121,18 +109,16 @@ if st.button("Get Response"):
         
         for i, model in enumerate(selected_models):
             if model == "RouteLLM Router":
+                router_options = ["mf", "bert"]
+                selected_router = columns[i].selectbox("Select Router", router_options, key=f"router_{i}")
                 response, model_used, latency, cost = get_response(prompt, selected_router)
                 if response is not None and model_used is not None:
                     columns[i].write(f"Response from {model_used}:")
                     columns[i].write(response)
                     if latency is not None:
                         columns[i].write(f"Latency: {latency:.2f} seconds")
-                    else:
-                        columns[i].write("Latency: Not available")
                     if cost is not None:
                         columns[i].write(f"Cost: ${cost:.4f}")
-                    else:
-                        columns[i].write("Cost: Not available")
                 else:
                     columns[i].write("Error: Unable to retrieve response.")
             else:
@@ -142,12 +128,8 @@ if st.button("Get Response"):
                     columns[i].write(response)
                     if latency is not None:
                         columns[i].write(f"Latency: {latency:.2f} seconds")
-                    else:
-                        columns[i].write("Latency: Not available")
                     if cost is not None:
                         columns[i].write(f"Cost: ${cost:.4f}")
-                    else:
-                        columns[i].write("Cost: Not available")
                 else:
                     columns[i].write("Error: Unable to retrieve response.")
     except Exception as e:
