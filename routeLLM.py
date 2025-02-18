@@ -70,7 +70,7 @@ def get_response_from_model(prompt, model_name):
     try:
         start_time = time.time()
         if model_name == "gpt-4o":
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=1024,
