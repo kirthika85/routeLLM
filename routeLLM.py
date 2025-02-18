@@ -114,10 +114,36 @@ if st.button("Get Response"):
     
     for i, model in enumerate(selected_models):
         if model == "RouteLLM Router":
+            start_time = time.time()
             response, model_used = get_response(prompt)
+            end_time = time.time()
+            latency = end_time - start_time
+            cost = calculate_cost(model_used, len(prompt), len(response))
+            accuracy = evaluate_accuracy(response, prompt)
             columns[i].write(f"Response from {model_used}:")
             columns[i].write(response)
+            columns[i].write(f"Latency: {latency:.2f} seconds")
+            columns[i].write(f"Cost: ${cost:.4f}")
+            columns[i].write(f"Accuracy: {accuracy}")
         else:
+            start_time = time.time()
             response, model_used = asyncio.run(get_response_from_model(prompt, model))
+            end_time = time.time()
+            latency = end_time - start_time
+            cost = calculate_cost(model_used, len(prompt), len(response))
+            accuracy = evaluate_accuracy(response, prompt)
             columns[i].write(f"Response from {model_used}:")
             columns[i].write(response)
+            columns[i].write(f"Latency: {latency:.2f} seconds")
+            columns[i].write(f"Cost: ${cost:.4f}")
+            columns[i].write(f"Accuracy: {accuracy}")
+
+# Optional: Display model details
+if st.checkbox("Show Model Details"):
+    st.write("Model Details:")
+    for model, details in models.items():
+        st.write(f"Model: {model}")
+        st.write(f"Vendor: {details['vendor']}")
+        st.write(f"Cost per Prompt: {details['cost_per_prompt']}")
+        st.write(f"Cost per Completion: {details['cost_per_completion']}")
+        st.write("----")
