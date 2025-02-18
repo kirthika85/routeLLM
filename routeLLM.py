@@ -25,14 +25,24 @@ models = {
     "llama3.1-8b": {"vendor": "meta-llama", "cost_per_prompt": 1e-7, "cost_per_completion": 1e-7},
 }
 
+# Streamlit App
+st.title("LLM Router Application")
+
+# Router selection
+router_options = ["mf", "bert"]
+selected_router = st.selectbox("Select Router", router_options)
+
 # Initialize RouteLLM Controller
 client = Controller(
-    routers=["mf"],  # Specify which router to use
-    strong_model="gpt-4o",  # Strong model for complex tasks
-    weak_model="claude-3-haiku-20240307",  # Weak model for simpler tasks
+    routers=[selected_router],
+    strong_model="gpt-4o",
+    weak_model="claude-3-haiku-20240307",
     config={
         "mf": {
-            "checkpoint_path": "routellm/mf_gpt4_augmented"  # Path to model checkpoint
+            "checkpoint_path": "routellm/mf_gpt4_augmented"
+        },
+        "bert": {
+            "checkpoint_path": "path/to/bert/checkpoint"
         }
     }
 )
@@ -43,7 +53,7 @@ def calculate_cost(model_name, input_tokens, output_tokens):
         return (input_tokens + output_tokens) * 5 / 1e6
     elif model_name == "claude-3-haiku-20240307":
         return (input_tokens * 0.8 + output_tokens * 4) / 1e6
-    elif model_name == "RouteLLM Router":
+    elif model_name.startswith("RouteLLM Router"):
         strong_model_cost = (input_tokens + output_tokens) * 5 / 1e6
         weak_model_cost = (input_tokens * 0.8 + output_tokens * 4) / 1e6
         return (strong_model_cost + weak_model_cost) / 2
@@ -51,17 +61,17 @@ def calculate_cost(model_name, input_tokens, output_tokens):
         return 0
 
 # Function to get a response from the RouteLLM router
-def get_response(prompt):
+def get_response(prompt, selected_router):
     try:
         start_time = time.time()
         response = client.chat.completions.create(
-            model="router-mf-0.11593",  # Specify the router model with cost threshold
+            model=f"router-{selected_router}-0.11593",
             messages=[{"role": "user", "content": prompt}]
         )
         end_time = time.time()
         latency = end_time - start_time
-        cost = calculate_cost("RouteLLM Router", len(prompt), len(response.choices[0]["message"]["content"]))
-        return response.choices[0]["message"]["content"], "RouteLLM Router", latency, cost
+        cost = calculate_cost(f"RouteLLM Router ({selected_router.upper()})", len(prompt), len(response.choices[0]["message"]["content"]))
+        return response.choices[0]["message"]["content"], f"RouteLLM Router ({selected_router.upper()})", latency, cost
     except Exception as e:
         return f"Error: {e}", None, None, None
 
@@ -99,9 +109,6 @@ def get_response_from_model(prompt, model_name):
     except Exception as e:
         return f"Error: {e}", None, None, None
 
-# Streamlit App
-st.title("LLM Router Application")
-
 selected_models = st.multiselect("Select Models", list(models.keys()) + ["RouteLLM Router"])
 
 # Input prompt
@@ -114,7 +121,7 @@ if st.button("Get Response"):
         
         for i, model in enumerate(selected_models):
             if model == "RouteLLM Router":
-                response, model_used, latency, cost = get_response(prompt)
+                response, model_used, latency, cost = get_response(prompt, selected_router)
                 if response is not None and model_used is not None:
                     columns[i].write(f"Response from {model_used}:")
                     columns[i].write(response)
