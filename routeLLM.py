@@ -50,7 +50,8 @@ def init_controller():
         config={
             "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
             "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented"}
-        }
+        },
+        verbose=True
     )
 
 controller = init_controller()
