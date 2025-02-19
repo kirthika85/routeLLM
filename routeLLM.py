@@ -41,32 +41,39 @@ def calculate_cost(model_name, input_tokens, output_tokens):
     else:
         return 0
 
+@st.cache_resource
+def init_controller():
+    return Controller(
+        routers=["mf", "bert"],
+        strong_model="gpt-4o",
+        weak_model="gpt-3.5-turbo",
+        config={
+            "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
+            "bert": {"checkpoint_path": "bert-base-uncased"}
+        }
+    )
+
+controller = init_controller()
+
 # Function to get a response from the RouteLLM router
 def get_response(prompt, router):
     try:
-        client = Controller(
-            routers=[router],
-            strong_model="gpt-4o",
-            weak_model="gpt-3.5-turbo",
-            config={
-                "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
-                "bert": {"checkpoint_path": "bert-base-uncased"}
-            }
-        )
         start_time = time.time()
-        response = client.chat.completions.create(
+        response = controller.chat.completions.create(
             model=f"router-{router}-0.11593",
             messages=[{"role": "user", "content": prompt}]
         )
         end_time = time.time()
         latency = end_time - start_time
         input_tokens = len(prompt)
-        output_tokens = len(response.choices[0]["message"]["content"])
-        cost = calculate_cost(f"RouteLLM Router ({router.upper()})", len(prompt), len(response.choices[0]["message"]["content"]))
+        output_tokens = len(response.choices[0].message.content)
+        cost = calculate_cost(f"RouteLLM Router ({router.upper()})", input_tokens, output_tokens)
         selected_model = response.choices[0].message.metadata.get('selected_model', 'Unknown')
-        return response.choices[0]["message"]["content"], f"RouteLLM Router ({router.upper()})", latency, cost,input_tokens,output_tokens,None
+        return response.choices[0].message.content, f"RouteLLM Router ({router.upper()})", latency, cost, input_tokens, output_tokens, selected_model
     except Exception as e:
-        return f"Error: {e}", None, None, None,None,None,None
+        st.error(f"RouteLLM Error: {str(e)}")
+        return f"Error: {str(e)}", None, None, None, None, None, None
+
 
 # Function to get a response from a specific model (e.g., GPT-4o, Claude)
 def get_response_from_model(prompt, model_name):
