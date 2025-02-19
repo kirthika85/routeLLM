@@ -49,7 +49,7 @@ def init_controller():
         weak_model="gpt-3.5-turbo",
         config={
             "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
-            "bert": {"checkpoint_path": "bert-base-uncased"}
+            "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented"}
         }
     )
 
