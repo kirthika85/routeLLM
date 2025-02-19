@@ -5,7 +5,7 @@ from routellm.controller import Controller
 import time
 from anthropic import Anthropic
 import subprocess
-import routellm
+
 
 os.environ['LITELLM_LOG'] = 'DEBUG'
 
@@ -150,7 +150,6 @@ def get_response_from_model(prompt, model_name, threshold):
     except Exception as e:
         return f"Error: {e}", None, None, None, None, None, None
 
-st.write(f"RouteLLM version: {routellm.__version__}")
 selected_models = st.multiselect("Select Models", list(models.keys()))
 
 # Input prompt
