@@ -84,7 +84,8 @@ def get_response(prompt, router, threshold):
         input_tokens = len(prompt)
         output_tokens = len(response.choices[0].message.content)
         cost = calculate_cost(f"RouteLLM Router ({router.upper()})", input_tokens, output_tokens)
-        return response.choices[0].message.content, f"RouteLLM Router ({router.upper()})", latency, cost, input_tokens, output_tokens
+        selected_model = response.model
+        return response.choices[0].message.content, f"RouteLLM Router ({router.upper()})", latency, cost, input_tokens, output_tokens,selected_model
     except Exception as e:
         st.error(f"RouteLLM Error: {str(e)}")
         return f"Error: {str(e)}", None, None, None, None, None
@@ -154,8 +155,9 @@ if st.button("Get Response"):
                 columns[i].write(f"Input Tokens: {input_tokens}")
                 columns[i].write(f"Output Tokens: {output_tokens}")
                 if model_used.startswith("RouteLLM Router"):
-                    selected_model = "GPT-4" if cost > (input_tokens * 5e-6) + (output_tokens * 1.5e-5) else "GPT-3.5-turbo"
+                    #selected_model = "GPT-4" if cost > (input_tokens * 5e-6) + (output_tokens * 1.5e-5) else "GPT-3.5-turbo"
                     columns[i].write(f"Selected Model: {selected_model}")
+                    
             else:
                 columns[i].write("Error: Unable to retrieve response.")
     except Exception as e:
