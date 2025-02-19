@@ -38,7 +38,7 @@ def init_controller():
         st.write(f"Initializing controller with default threshold")
         controller = Controller(
             routers=["mf", "bert"],
-            strong_model="gpt-4o",
+            strong_model="gpt-3.5-turbo",
             weak_model="gpt-3.5-turbo",
             config={
                 "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
