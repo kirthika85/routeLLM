@@ -4,9 +4,9 @@ import openai
 from routellm.controller import Controller
 import time
 from anthropic import Anthropic
-import litellm
 
-litellm.set_verbose = True
+
+os.environ['LITELLM_LOG'] = 'DEBUG'
 
 with st.spinner("🔄 Mool AI agent Authentication In progress..."):
     openai.api_key = os.environ.get("OPENAI_API_KEY")
