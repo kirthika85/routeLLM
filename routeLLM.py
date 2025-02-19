@@ -5,7 +5,7 @@ from routellm.controller import Controller
 import time
 from anthropic import Anthropic
 import subprocess
-
+import re  # Import the regular expression module
 
 os.environ['LITELLM_LOG'] = 'DEBUG'
 
@@ -33,23 +33,50 @@ models = {
 st.title("LLM Router Application")
 
 def calibrate_threshold(strong_model_pct):
-    command = f"python -m routellm.calibrate_threshold --task calibrate --routers mf --strong-model-pct {strong_model_pct} --config config.example.yaml"
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-            raise ValueError(f"Calibration failed: {result.stderr}")
+    try:
+        command = f"python -m routellm.calibrate_threshold --routers mf --strong-model-pct {strong_model_pct} --config config.example.yaml"
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            st.error(f"Calibration failed.  Check Streamlit Logs for details.")
+            st.error(f"Stderr: {result.stderr}")  #Display Stderr
+            return None  # Or some appropriate default threshold
         output = result.stdout.strip()
-        threshold = float(output.split('=')[-1].strip())
-        return threshold
+
+        # Use a regular expression to find the threshold value
+        match = re.search(r"Threshold:\s*([0-9.]+)", output) #Modified from your prompt
+        if match:
+            threshold_str = match.group(1)
+            try:
+                threshold = float(threshold_str)
+                return threshold
+            except ValueError:
+                st.error(f"Could not convert threshold to float: {threshold_str}")
+                return None
+        else:
+            st.error(f"Could not find threshold in output: {output}")
+            return None # Or some appropriate default threshold
+
+
     except Exception as e:
         st.error(f"Calibration error: {str(e)}")
-        return None
+        return None  # Or some appropriate default threshold
+
 
 strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
 threshold = 0.11593  # Default threshold
 
 if st.button("Calibrate Threshold"):
-    threshold = calibrate_threshold(strong_model_pct)
-    st.write(f"Calibrated threshold: {threshold}")
+    new_threshold = calibrate_threshold(strong_model_pct)
+    if new_threshold is not None:
+        threshold = new_threshold
+        st.session_state['threshold'] = threshold  # Store in session state (SEE IMPORTANT NOTE)
+        st.write(f"Calibrated threshold: {threshold}")
+    else:
+        st.warning("Using default threshold.")
+else:
+    if 'threshold' in st.session_state:
+        threshold = st.session_state['threshold']
 
 # Function to calculate cost
 def calculate_cost(model_name, input_tokens, output_tokens):
@@ -73,8 +100,8 @@ def init_controller(threshold):
             strong_model="gpt-4o",
             weak_model="gpt-3.5-turbo",
             config={
-                "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
-                "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented"}
+                "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented", "threshold": threshold},
+                "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented", "threshold": threshold}
             }
         )
         st.write("Controller initialized successfully")
@@ -83,13 +110,9 @@ def init_controller(threshold):
         st.error(f"Error initializing controller: {str(e)}")
         return None
 
-controller = init_controller(threshold)
-if controller is None:
-    st.error("Failed to initialize RouteLLM controller. RouteLLM features will be disabled.")
-    use_routellm = False
-else:
-    use_routellm = True
-    
+if 'controller' not in st.session_state: #only initialize if it's not in st.session_state.
+    st.session_state['controller'] = init_controller(threshold) # store in st.session_state.
+controller =  st.session_state['controller'] # get from st.session_state
 
 # Function to get a response from the RouteLLM router
 def get_response(prompt, router, threshold):
@@ -142,11 +165,12 @@ def get_response_from_model(prompt, model_name, threshold):
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
             return response.choices[0].message.content, model_name, latency, cost, input_tokens, output_tokens, None
         elif model_name.startswith("RouteLLM Router"):
-            if use_routellm:
+            if controller is not None:  # Check if controller is initialized
                 router = "mf" if model_name.endswith("(MF)") else "bert"
                 return get_response(prompt, router, threshold)
             else:
-                return "RouteLLM is not available", model_name, 0, 0, len(prompt), 0, None
+                st.error("RouteLLM Controller failed to initialize. Cannot use RouteLLM Router.")
+                return "RouteLLM unavailable", model_name, 0, 0, 0, 0, None
         else:
             end_time = time.time()
             latency = end_time - start_time
@@ -166,7 +190,7 @@ prompt = st.text_area("Enter your prompt:", height=100)
 if st.button("Get Response"):
     try:
         columns = st.columns(len(selected_models))
-        
+
         for i, model in enumerate(selected_models):
             response, model_used, latency, cost, input_tokens, output_tokens, selected_model = get_response_from_model(prompt, model, threshold)
             if response is not None and model_used is not None:
@@ -186,7 +210,7 @@ if st.button("Get Response"):
                 columns[i].write("Error: Unable to retrieve response.")
     except Exception as e:
         st.error(f"An error occurred: {e}")
-                
+
 # Optional: Display model details
 if st.checkbox("Show Model Details"):
     st.write("Model Details:")
