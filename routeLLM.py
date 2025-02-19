@@ -68,8 +68,8 @@ def get_response(prompt, router):
         input_tokens = len(prompt)
         output_tokens = len(response.choices[0].message.content)
         cost = calculate_cost(f"RouteLLM Router ({router.upper()})", input_tokens, output_tokens)
-        selected_model = response.choices[0].message.metadata.get('selected_model', 'Unknown')
-        return response.choices[0].message.content, f"RouteLLM Router ({router.upper()})", latency, cost, input_tokens, output_tokens, selected_model
+        #selected_model = response.choices[0].message.metadata.get('selected_model', 'Unknown')
+        return response.choices[0].message.content, f"RouteLLM Router ({router.upper()})", latency, cost, input_tokens, output_tokens
     except Exception as e:
         st.error(f"RouteLLM Error: {str(e)}")
         return f"Error: {str(e)}", None, None, None, None, None, None
@@ -129,7 +129,7 @@ if st.button("Get Response"):
         columns = st.columns(len(selected_models))
         
         for i, model in enumerate(selected_models):
-            response, model_used, latency, cost,input_tokens,output_tokens,selected_model = get_response_from_model(prompt, model)
+            response, model_used, latency, cost,input_tokens,output_tokens = get_response_from_model(prompt, model)
             if response is not None and model_used is not None:
                 columns[i].write(f"Response from {model_used}:")
                 columns[i].write(response)
@@ -139,10 +139,6 @@ if st.button("Get Response"):
                     columns[i].write(f"Cost: ${cost:.4f}")
                 columns[i].write(f"Input Tokens: {input_tokens}")
                 columns[i].write(f"Output Tokens: {output_tokens}")
-                if model.startswith("RouteLLM Router") and selected_model:
-                    columns[i].write(f"Selected Model: {selected_model}")
-                else:
-                    columns[i].write(f"Selected Model: {model_used}")
             else:
                 columns[i].write("Error: Unable to retrieve response.")
     except Exception as e:
