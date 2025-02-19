@@ -5,6 +5,7 @@ from routellm.controller import Controller
 import time
 from anthropic import Anthropic
 import subprocess
+import routellm
 
 os.environ['LITELLM_LOG'] = 'DEBUG'
 
@@ -58,17 +59,30 @@ def calculate_cost(model_name, input_tokens, output_tokens):
 
 @st.cache_resource
 def init_controller(threshold):
-    return Controller(
-        routers=["mf", "bert"],
-        strong_model="gpt-4o",
-        weak_model="gpt-3.5-turbo",
-        config={
-            "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented", "threshold": threshold},
-            "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented", "threshold": threshold}
-        }
-    )
+    try:
+        st.write(f"Initializing controller with threshold: {threshold}")
+        controller = Controller(
+            routers=["mf", "bert"],
+            strong_model="gpt-4o",
+            weak_model="gpt-3.5-turbo",
+            config={
+                "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented", "threshold": threshold},
+                "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented", "threshold": threshold}
+            }
+        )
+        st.write("Controller initialized successfully")
+        return controller
+    except Exception as e:
+        st.error(f"Error initializing controller: {str(e)}")
+        return None
 
 controller = init_controller(threshold)
+if controller is None:
+    st.error("Failed to initialize RouteLLM controller. RouteLLM features will be disabled.")
+    use_routellm = False
+else:
+    use_routellm = True
+    
 
 # Function to get a response from the RouteLLM router
 def get_response(prompt, router, threshold):
@@ -121,8 +135,11 @@ def get_response_from_model(prompt, model_name, threshold):
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
             return response.choices[0].message.content, model_name, latency, cost, input_tokens, output_tokens, None
         elif model_name.startswith("RouteLLM Router"):
-            router = "mf" if model_name.endswith("(MF)") else "bert"
-            return get_response(prompt, router, threshold)
+            if use_routellm:
+                router = "mf" if model_name.endswith("(MF)") else "bert"
+                return get_response(prompt, router, threshold)
+            else:
+                return "RouteLLM is not available", model_name, 0, 0, len(prompt), 0, None
         else:
             end_time = time.time()
             latency = end_time - start_time
@@ -133,6 +150,7 @@ def get_response_from_model(prompt, model_name, threshold):
     except Exception as e:
         return f"Error: {e}", None, None, None, None, None, None
 
+st.write(f"RouteLLM version: {routellm.__version__}")
 selected_models = st.multiselect("Select Models", list(models.keys()))
 
 # Input prompt
