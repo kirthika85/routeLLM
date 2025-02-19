@@ -78,6 +78,7 @@ def get_response(prompt, router, threshold):
             model=f"router-{router}-{threshold}",
             messages=[{"role": "user", "content": prompt}]
         )
+        st.write("Full response:", response)
         end_time = time.time()
         latency = end_time - start_time
         input_tokens = len(prompt)
