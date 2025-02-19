@@ -32,12 +32,12 @@ models = {
 st.title("LLM Router Application")
 
 def calibrate_threshold(strong_model_pct):
-    command = f"python -m routellm.calibrate_threshold --routers mf --strong-model-pct {strong_model_pct} --config config.example.yaml"
+    command = f"python -m routellm.calibrate_threshold --task calibrate --routers mf --strong-model-pct {strong_model_pct} --config config.example.yaml"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return result.stdout.strip()
+    return float(result.stdout.strip().split('=')[-1].strip())
 
-strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.1)
-threshold = "0.11593"  # Default threshold
+strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
+threshold = 0.11593  # Default threshold
 
 if st.button("Calibrate Threshold"):
     threshold = calibrate_threshold(strong_model_pct)
@@ -51,24 +51,24 @@ def calculate_cost(model_name, input_tokens, output_tokens):
         return (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
     elif model_name.startswith("RouteLLM Router"):
         strong_model_cost = (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
-        weak_model_cost = (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
+        weak_model_cost = (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
         return (strong_model_cost + weak_model_cost) / 2
     else:
         return 0
 
 @st.cache_resource
-def init_controller():
+def init_controller(threshold):
     return Controller(
         routers=["mf", "bert"],
         strong_model="gpt-4o",
         weak_model="gpt-3.5-turbo",
         config={
-            "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
-            "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented"}
+            "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented", "threshold": threshold},
+            "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented", "threshold": threshold}
         }
     )
 
-controller = init_controller()
+controller = init_controller(threshold)
 
 # Function to get a response from the RouteLLM router
 def get_response(prompt, router, threshold):
@@ -172,3 +172,5 @@ if st.checkbox("Show Model Details"):
         st.write(f"Cost per Prompt: {details['cost_per_prompt']}")
         st.write(f"Cost per Completion: {details['cost_per_completion']}")
         st.write("----")
+
+st.write(f"Current threshold: {threshold}")
