@@ -4,6 +4,9 @@ import openai
 from routellm.controller import Controller
 import time
 from anthropic import Anthropic
+import litellm
+
+litellm.set_verbose = True
 
 with st.spinner("🔄 Mool AI agent Authentication In progress..."):
     openai.api_key = os.environ.get("OPENAI_API_KEY")
@@ -50,8 +53,7 @@ def init_controller():
         config={
             "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
             "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented"}
-        },
-        verbose=True
+        }
     )
 
 controller = init_controller()
