@@ -19,7 +19,7 @@ if openai.api_key is None:
 
 # Define models and parameters
 models = {
-    "claude-3-haiku-20240307": {"vendor": "anthropic", "cost_per_prompt": 2.5e-7, "cost_per_completion": 1.25e-6},
+    "gpt-3.5-turbo": {"vendor": "openai", "cost_per_prompt": 5e-6, "cost_per_completion": 1.5e-5,
     "gpt-4o": {"vendor": "openai", "cost_per_prompt": 5e-6, "cost_per_completion": 1.5e-5},
     "RouteLLM Router (MF)": {"vendor": "routellm", "cost_per_prompt": 0, "cost_per_completion": 0},
     "RouteLLM Router (BERT)": {"vendor": "routellm", "cost_per_prompt": 0, "cost_per_completion": 0},
@@ -32,11 +32,11 @@ st.title("LLM Router Application")
 def calculate_cost(model_name, input_tokens, output_tokens):
     if model_name == "gpt-4o":
         return (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
-    elif model_name == "claude-3-haiku-20240307":
+    elif model_name == "gpt-3.5-turbo":
         return (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
     elif model_name.startswith("RouteLLM Router"):
         strong_model_cost = (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
-        weak_model_cost = (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
+        weak_model_cost = (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
         return (strong_model_cost + weak_model_cost) / 2
     else:
         return 0
@@ -47,7 +47,7 @@ def get_response(prompt, router):
         client = Controller(
             routers=[router],
             strong_model="gpt-4o",
-            weak_model="claude-3-haiku-20240307",
+            weak_model="gpt-3.5-turbo",
             config={
                 "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
                 "bert": {"checkpoint_path": "bert-base-uncased"}
@@ -86,18 +86,18 @@ def get_response_from_model(prompt, model_name):
             output_tokens = len(response.choices[0].message.content)
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
             return response.choices[0].message.content, model_name, latency, cost,input_tokens, output_tokens,None
-        elif model_name == "claude-3-haiku-20240307":
-            client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-            message = client.messages.create(
-                model="claude-3-haiku@20240307",
-                max_tokens=1024,
-                messages=[{"role": "user", "content": prompt}],
+        elif model_name == "gpt-3.5-turbo":
+            response = openai.chat.completions.create(
+                       model="gpt-3.5-turbo",
+                       messages=[{"role": "user", "content": prompt}],
+                       max_tokens=1024,
+                       temperature=0.7,
             )
             end_time = time.time()
             latency = end_time - start_time
             input_tokens = len(prompt)
-            output_tokens = len(message.content)
-            cost = calculate_cost(model_name, len(prompt), len(message.content))
+            output_tokens = len(response.choices[0].message.content)
+            cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
             return message.content, model_name, latency, cost,input_tokens, output_tokens,None
         elif model_name.startswith("RouteLLM Router"):
             router = "mf" if model_name.endswith("(MF)") else "bert"
