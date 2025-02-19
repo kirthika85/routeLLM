@@ -156,7 +156,7 @@ if st.button("Get Response"):
         columns = st.columns(len(selected_models))
 
         for i, model in enumerate(selected_models):
-            response, model_used, latency, cost, input_tokens, output_tokens, selected_model = get_response_from_model(prompt, model_name)
+            response, model_used, latency, cost, input_tokens, output_tokens, selected_model = get_response_from_model(prompt, model)
             if response is not None and model_used is not None:
                 columns[i].write(f"Response from {model_used}:")
                 columns[i].write(response)
