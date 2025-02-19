@@ -66,8 +66,8 @@ def init_controller(threshold):
             strong_model="gpt-4o",
             weak_model="gpt-3.5-turbo",
             config={
-                "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented", "threshold": threshold},
-                "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented", "threshold": threshold}
+                "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
+                "bert": {"checkpoint_path": "routellm/bert_gpt4_augmented"}
             }
         )
         st.write("Controller initialized successfully")
