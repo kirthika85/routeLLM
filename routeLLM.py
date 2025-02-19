@@ -33,36 +33,38 @@ models = {
 st.title("LLM Router Application")
 
 def calibrate_threshold(strong_model_pct):
+    config_file = "config.example.yaml"
+
+    if not os.path.exists(config_file):
+        st.error(f"Error: Configuration file '{config_file}' not found in the current directory.")
+        return None
+        
     try:
-        command = f"python -m routellm.calibrate_threshold --routers mf --strong-model-pct {strong_model_pct} --config config.example.yaml"
+        command = f"python -m routellm.calibrate_threshold --routers mf --strong-model-pct {strong_model_pct} --config {config_file}"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+        st.write("Command output:")
+        st.code(result.stdout)
 
         if result.returncode != 0:
             st.error(f"Calibration failed.  Check Streamlit Logs for details.")
             st.error(f"Stderr: {result.stderr}")  #Display Stderr
             return None  # Or some appropriate default threshold
+            
         output = result.stdout.strip()
-
-        # Use a regular expression to find the threshold value
-        match = re.search(r"Threshold:\s*([0-9.]+)", output) #Modified from your prompt
+        # Try to find a float in the output
+        match = re.search(r'\d+\.\d+', output)
         if match:
-            threshold_str = match.group(1)
-            try:
-                threshold = float(threshold_str)
-                return threshold
-            except ValueError:
-                st.error(f"Could not convert threshold to float: {threshold_str}")
-                return None
+            threshold = float(match.group())
+            return threshold
         else:
-            st.error(f"Could not find threshold in output: {output}")
-            return None # Or some appropriate default threshold
-
+            st.error(f"Could not find a threshold value in the output.")
+            return None
 
     except Exception as e:
         st.error(f"Calibration error: {str(e)}")
-        return None  # Or some appropriate default threshold
-
-
+        return None
+        
 strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
 threshold = 0.11593  # Default threshold
 
