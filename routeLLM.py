@@ -38,60 +38,43 @@ def calibrate_threshold(strong_model_pct):
     if not os.path.exists(config_file):
         st.error(f"Error: Configuration file '{config_file}' not found in the current directory.")
         return None
-        
+    
     try:
         command = f"python -m routellm.calibrate_threshold --routers mf --strong-model-pct {strong_model_pct} --config {config_file}"
+        st.write(f"Running calibration command: {command}")  #DEBUG
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
         st.write("Command output:")
         st.code(result.stdout)
 
         if result.returncode != 0:
-            st.error(f"Calibration failed.  Check Streamlit Logs for details.")
-            st.error(f"Stderr: {result.stderr}")  #Display Stderr
-            return None  # Or some appropriate default threshold
-            
+            st.error(f"Calibration failed with return code {result.returncode}.  Check Streamlit Logs for details.")
+            st.error(f"Stderr: {result.stderr}")
+            return None
+
         output = result.stdout.strip()
-        # Try to find a float in the output
-        match = re.search(r'\d+\.\d+', output)
-        if match:
-            threshold = float(match.group())
-            return threshold
+        if output:
+            #This Regex looks for the number preceeded by an optional "Threshold:" plus any number of whitespace
+            match = re.search(r"(?:Threshold:)?\s*([0-9.]+)", output)
+            if match:
+                threshold_str = match.group(1)
+                try:
+                    threshold = float(threshold_str)
+                    st.write(f"Successfully extracted threshold: {threshold}")  # Debugging
+                    return threshold
+                except ValueError:
+                    st.error(f"Could not convert threshold to float: {threshold_str}")
+                    return None
+            else:
+                st.error(f"Could not find threshold in output, even with regex. Output was: {output}")
+                return None
         else:
-            st.error(f"Could not find a threshold value in the output.")
+            st.error("Calibration output is empty.")
             return None
 
     except Exception as e:
         st.error(f"Calibration error: {str(e)}")
         return None
-        
-strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
-threshold = 0.11593  # Default threshold
-
-if st.button("Calibrate Threshold"):
-    new_threshold = calibrate_threshold(strong_model_pct)
-    if new_threshold is not None:
-        threshold = new_threshold
-        st.session_state['threshold'] = threshold  # Store in session state (SEE IMPORTANT NOTE)
-        st.write(f"Calibrated threshold: {threshold}")
-    else:
-        st.warning("Using default threshold.")
-else:
-    if 'threshold' in st.session_state:
-        threshold = st.session_state['threshold']
-
-# Function to calculate cost
-def calculate_cost(model_name, input_tokens, output_tokens):
-    if model_name == "gpt-4o":
-        return (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
-    elif model_name == "gpt-3.5-turbo":
-        return (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
-    elif model_name.startswith("RouteLLM Router"):
-        strong_model_cost = (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
-        weak_model_cost = (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
-        return (strong_model_cost + weak_model_cost) / 2
-    else:
-        return 0
 
 @st.cache_resource
 def init_controller(threshold):
@@ -112,14 +95,48 @@ def init_controller(threshold):
         st.error(f"Error initializing controller: {str(e)}")
         return None
 
-if 'controller' not in st.session_state: #only initialize if it's not in st.session_state.
-    st.session_state['controller'] = init_controller(threshold) # store in st.session_state.
-controller =  st.session_state['controller'] # get from st.session_state
+strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
+threshold = 0.11593  # Default threshold
+
+if st.button("Calibrate Threshold"):
+    new_threshold = calibrate_threshold(strong_model_pct)
+    if new_threshold is not None:
+        threshold = new_threshold
+        st.session_state['threshold'] = threshold
+        st.write(f"Calibrated threshold: {threshold}")
+    else:
+        st.warning("Using default threshold.")
+else:
+    if 'threshold' in st.session_state:
+        threshold = st.session_state['threshold']
+if 'controller' not in st.session_state:
+    st.session_state['controller'] = init_controller(threshold)
+
+controller =  st.session_state.get('controller',None) #If it's still None just keep it that way.
+
+
+# Function to calculate cost
+def calculate_cost(model_name, input_tokens, output_tokens):
+    if model_name == "gpt-4o":
+        return (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
+    elif model_name == "gpt-3.5-turbo":
+        return (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
+    elif model_name.startswith("RouteLLM Router"):
+        strong_model_cost = (input_tokens * 5e-6) + (output_tokens * 1.5e-5)
+        weak_model_cost = (input_tokens * 2.5e-7) + (output_tokens * 1.25e-6)
+        return (strong_model_cost + weak_model_cost) / 2
+    else:
+        return 0
 
 # Function to get a response from the RouteLLM router
 def get_response(prompt, router, threshold):
     try:
         start_time = time.time()
+        # Added a check to make sure controller is not None before attemping to use it.
+        if controller is None:
+            st.error("Controller not properly initialized, skipping RouteLLM")
+            return "RouteLLM Unavailable", "N/A", 0, 0, 0, 0, "N/A"
+
         response = controller.chat.completions.create(
             model=f"router-{router}-{threshold}",
             messages=[{"role": "user", "content": prompt}]
