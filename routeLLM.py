@@ -4,7 +4,7 @@ import openai
 from routellm.controller import Controller
 import time
 from anthropic import Anthropic
-
+import subprocess
 
 os.environ['LITELLM_LOG'] = 'DEBUG'
 
@@ -30,6 +30,17 @@ models = {
 
 # Streamlit App
 st.title("LLM Router Application")
+
+def calibrate_threshold(strong_model_pct):
+    command = f"python -m routellm.calibrate_threshold --routers mf --strong-model-pct {strong_model_pct} --config config.example.yaml"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    return result.stdout.strip()
+
+strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.1)
+
+if st.button("Calibrate Threshold"):
+    threshold = calibrate_threshold(strong_model_pct)
+    st.write(f"Calibrated threshold: {threshold}")
 
 # Function to calculate cost
 def calculate_cost(model_name, input_tokens, output_tokens):
@@ -59,11 +70,11 @@ def init_controller():
 controller = init_controller()
 
 # Function to get a response from the RouteLLM router
-def get_response(prompt, router):
+def get_response(prompt, router, threshold):
     try:
         start_time = time.time()
         response = controller.chat.completions.create(
-            model=f"router-{router}-0.11593",
+            model=f"router-{router}-{threshold}",
             messages=[{"role": "user", "content": prompt}]
         )
         end_time = time.time()
@@ -71,15 +82,13 @@ def get_response(prompt, router):
         input_tokens = len(prompt)
         output_tokens = len(response.choices[0].message.content)
         cost = calculate_cost(f"RouteLLM Router ({router.upper()})", input_tokens, output_tokens)
-        #selected_model = response.choices[0].message.metadata.get('selected_model', 'Unknown')
         return response.choices[0].message.content, f"RouteLLM Router ({router.upper()})", latency, cost, input_tokens, output_tokens
     except Exception as e:
         st.error(f"RouteLLM Error: {str(e)}")
-        return f"Error: {str(e)}", None, None, None, None, None, None
-
+        return f"Error: {str(e)}", None, None, None, None, None
 
 # Function to get a response from a specific model (e.g., GPT-4o, Claude)
-def get_response_from_model(prompt, model_name):
+def get_response_from_model(prompt, model_name, threshold):
     try:
         start_time = time.time()
         if model_name == "gpt-4o":
@@ -94,7 +103,7 @@ def get_response_from_model(prompt, model_name):
             input_tokens = len(prompt)
             output_tokens = len(response.choices[0].message.content)
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
-            return response.choices[0].message.content, model_name, latency, cost,input_tokens, output_tokens,None
+            return response.choices[0].message.content, model_name, latency, cost, input_tokens, output_tokens
         elif model_name == "gpt-3.5-turbo":
             response = openai.chat.completions.create(
                        model="gpt-3.5-turbo",
@@ -107,19 +116,19 @@ def get_response_from_model(prompt, model_name):
             input_tokens = len(prompt)
             output_tokens = len(response.choices[0].message.content)
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
-            return response.choices[0].message.content, model_name, latency, cost,input_tokens, output_tokens,None
+            return response.choices[0].message.content, model_name, latency, cost, input_tokens, output_tokens
         elif model_name.startswith("RouteLLM Router"):
             router = "mf" if model_name.endswith("(MF)") else "bert"
-            return get_response(prompt, router)
+            return get_response(prompt, router, threshold)
         else:
             end_time = time.time()
             latency = end_time - start_time
             cost = 0
             input_tokens = len(prompt)
-            output_tokens = len(response.choices[0].message.content)
-            return f"Simulated response from {model_name}: {prompt} processed.", model_name, latency, cost,input_tokens,output_tokens,None
+            output_tokens = len(prompt)
+            return f"Simulated response from {model_name}: {prompt} processed.", model_name, latency, cost, input_tokens, output_tokens
     except Exception as e:
-        return f"Error: {e}", None, None, None
+        return f"Error: {e}", None, None, None, None, None
 
 selected_models = st.multiselect("Select Models", list(models.keys()))
 
@@ -132,7 +141,7 @@ if st.button("Get Response"):
         columns = st.columns(len(selected_models))
         
         for i, model in enumerate(selected_models):
-            response, model_used, latency, cost,input_tokens,output_tokens = get_response_from_model(prompt, model)
+            response, model_used, latency, cost, input_tokens, output_tokens = get_response_from_model(prompt, model, threshold)
             if response is not None and model_used is not None:
                 columns[i].write(f"Response from {model_used}:")
                 columns[i].write(response)
@@ -142,6 +151,9 @@ if st.button("Get Response"):
                     columns[i].write(f"Cost: ${cost:.4f}")
                 columns[i].write(f"Input Tokens: {input_tokens}")
                 columns[i].write(f"Output Tokens: {output_tokens}")
+                if model_used.startswith("RouteLLM Router"):
+                    selected_model = "GPT-4" if cost > (input_tokens * 5e-6) + (output_tokens * 1.5e-5) else "GPT-3.5-turbo"
+                    columns[i].write(f"Selected Model: {selected_model}")
             else:
                 columns[i].write("Error: Unable to retrieve response.")
     except Exception as e:
