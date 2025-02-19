@@ -53,7 +53,8 @@ def init_controller():
 
 
 #strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
-threshold = 0.11593  # Default threshold
+#threshold = 0.11593  # Default threshold
+threshold = 0.5
 
 if 'controller' not in st.session_state:
     st.session_state['controller'] = init_controller()
