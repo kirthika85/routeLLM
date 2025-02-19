@@ -1,4 +1,4 @@
 streamlit
 openai
-routellm[serv,eval]
+routellm[eval]
 anthropic
