@@ -51,8 +51,7 @@ def get_response(prompt, router):
             config={
                 "mf": {"checkpoint_path": "routellm/mf_gpt4_augmented"},
                 "bert": {"checkpoint_path": "bert-base-uncased"}
-            },
-            verbose=True
+            }
         )
         start_time = time.time()
         response = client.chat.completions.create(
