@@ -35,7 +35,14 @@ st.title("LLM Router Application")
 def calibrate_threshold(strong_model_pct):
     command = f"python -m routellm.calibrate_threshold --task calibrate --routers mf --strong-model-pct {strong_model_pct} --config config.example.yaml"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return float(result.stdout.strip().split('=')[-1].strip())
+    if result.returncode != 0:
+            raise ValueError(f"Calibration failed: {result.stderr}")
+        output = result.stdout.strip()
+        threshold = float(output.split('=')[-1].strip())
+        return threshold
+    except Exception as e:
+        st.error(f"Calibration error: {str(e)}")
+        return None
 
 strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
 threshold = 0.11593  # Default threshold
