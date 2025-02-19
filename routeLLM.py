@@ -85,10 +85,10 @@ def get_response(prompt, router, threshold):
         output_tokens = len(response.choices[0].message.content)
         cost = calculate_cost(f"RouteLLM Router ({router.upper()})", input_tokens, output_tokens)
         selected_model = response.model
-        return response.choices[0].message.content, f"RouteLLM Router ({router.upper()})", latency, cost, input_tokens, output_tokens,selected_model
+        return response.choices[0].message.content, f"RouteLLM Router ({router.upper()})", latency, cost, input_tokens, output_tokens, selected_model
     except Exception as e:
         st.error(f"RouteLLM Error: {str(e)}")
-        return f"Error: {str(e)}", None, None, None, None, None
+        return f"Error: {str(e)}", None, None, None, None, None, None
 
 # Function to get a response from a specific model (e.g., GPT-4o, Claude)
 def get_response_from_model(prompt, model_name, threshold):
@@ -106,7 +106,7 @@ def get_response_from_model(prompt, model_name, threshold):
             input_tokens = len(prompt)
             output_tokens = len(response.choices[0].message.content)
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
-            return response.choices[0].message.content, model_name, latency, cost, input_tokens, output_tokens
+            return response.choices[0].message.content, model_name, latency, cost, input_tokens, output_tokens, None
         elif model_name == "gpt-3.5-turbo":
             response = openai.chat.completions.create(
                        model="gpt-3.5-turbo",
@@ -119,7 +119,7 @@ def get_response_from_model(prompt, model_name, threshold):
             input_tokens = len(prompt)
             output_tokens = len(response.choices[0].message.content)
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
-            return response.choices[0].message.content, model_name, latency, cost, input_tokens, output_tokens
+            return response.choices[0].message.content, model_name, latency, cost, input_tokens, output_tokens, None
         elif model_name.startswith("RouteLLM Router"):
             router = "mf" if model_name.endswith("(MF)") else "bert"
             return get_response(prompt, router, threshold)
@@ -129,9 +129,9 @@ def get_response_from_model(prompt, model_name, threshold):
             cost = 0
             input_tokens = len(prompt)
             output_tokens = len(prompt)
-            return f"Simulated response from {model_name}: {prompt} processed.", model_name, latency, cost, input_tokens, output_tokens
+            return f"Simulated response from {model_name}: {prompt} processed.", model_name, latency, cost, input_tokens, output_tokens, None
     except Exception as e:
-        return f"Error: {e}", None, None, None, None, None
+        return f"Error: {e}", None, None, None, None, None, None
 
 selected_models = st.multiselect("Select Models", list(models.keys()))
 
@@ -144,7 +144,7 @@ if st.button("Get Response"):
         columns = st.columns(len(selected_models))
         
         for i, model in enumerate(selected_models):
-            response, model_used, latency, cost, input_tokens, output_tokens = get_response_from_model(prompt, model, threshold)
+            response, model_used, latency, cost, input_tokens, output_tokens, selected_model = get_response_from_model(prompt, model, threshold)
             if response is not None and model_used is not None:
                 columns[i].write(f"Response from {model_used}:")
                 columns[i].write(response)
@@ -155,9 +155,9 @@ if st.button("Get Response"):
                 columns[i].write(f"Input Tokens: {input_tokens}")
                 columns[i].write(f"Output Tokens: {output_tokens}")
                 if model_used.startswith("RouteLLM Router"):
-                    #selected_model = "GPT-4" if cost > (input_tokens * 5e-6) + (output_tokens * 1.5e-5) else "GPT-3.5-turbo"
                     columns[i].write(f"Selected Model: {selected_model}")
-                    
+                else:
+                    columns[i].write(f"Selected Model: {model_used}")
             else:
                 columns[i].write("Error: Unable to retrieve response.")
     except Exception as e:
