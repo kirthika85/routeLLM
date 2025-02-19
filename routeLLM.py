@@ -97,7 +97,8 @@ def init_controller(threshold):
         return None
 
 strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
-threshold = 0.11593  # Default threshold
+#threshold = 0.11593  # Default threshold
+threshold=0.0
 
 if st.button("Calibrate Threshold"):
     new_threshold = calibrate_threshold(strong_model_pct)
