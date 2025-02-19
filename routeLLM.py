@@ -5,8 +5,7 @@ from routellm.controller import Controller
 import time
 from anthropic import Anthropic
 import subprocess
-import re 
-import routellm
+import re
 
 os.environ['LITELLM_LOG'] = 'DEBUG'
 
@@ -33,6 +32,8 @@ models = {
 # Streamlit App
 st.title("LLM Router Application")
 
+# Remove Calibration Code
+"""
 def calibrate_threshold(strong_model_pct):
     config_file = "config.example.yaml"
 
@@ -49,38 +50,37 @@ def calibrate_threshold(strong_model_pct):
         st.code(result.stdout)
 
         if result.returncode != 0:
-            st.error(f"Calibration failed with return code {result.returncode}.  Check Streamlit Logs for details.")
+            st.error(f"Calibration failed.  Check Streamlit Logs for details.")
             st.error(f"Stderr: {result.stderr}")
             return None
 
         output = result.stdout.strip()
-        if output:
-            #This Regex looks for the number preceeded by an optional "Threshold:" plus any number of whitespace
-            match = re.search(r"(?:Threshold:)?\s*([0-9.]+)", output)
-            if match:
-                threshold_str = match.group(1)
-                try:
-                    threshold = float(threshold_str)
-                    st.write(f"Successfully extracted threshold: {threshold}")  # Debugging
-                    return threshold
-                except ValueError:
-                    st.error(f"Could not convert threshold to float: {threshold_str}")
-                    return None
-            else:
-                st.error(f"Could not find threshold in output, even with regex. Output was: {output}")
-                return None
+        # Try to find a float in the output
+        match = re.search(r'\d+\.\d+', output)
+        if match:
+            threshold = float(match.group())
+            return threshold
         else:
-            st.error("Calibration output is empty.")
+            st.error(f"Could not find a threshold value in the output.")
             return None
 
     except Exception as e:
         st.error(f"Calibration error: {str(e)}")
         return None
 
+
+#strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
+
+#if st.button("Calibrate Threshold"):
+#    calibrate_threshold(strong_model_pct)
+#    st.write(f"Calibrated threshold: {threshold}")
+
+
+"""
 @st.cache_resource
-def init_controller(threshold):
+def init_controller():
     try:
-        st.write(f"Initializing controller with threshold: {threshold}")
+        st.write(f"Initializing controller with default threshold")
         controller = Controller(
             routers=["mf", "bert"],
             strong_model="gpt-4o",
@@ -96,26 +96,27 @@ def init_controller(threshold):
         st.error(f"Error initializing controller: {str(e)}")
         return None
 
-strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
-#threshold = 0.11593  # Default threshold
-threshold=0.0
 
-if st.button("Calibrate Threshold"):
-    new_threshold = calibrate_threshold(strong_model_pct)
-    if new_threshold is not None:
-        threshold = new_threshold
-        st.session_state['threshold'] = threshold
-        st.write(f"Calibrated threshold: {threshold}")
-    else:
-        st.warning("Using default threshold.")
-else:
-    if 'threshold' in st.session_state:
-        threshold = st.session_state['threshold']
+#strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
+threshold = 0.11593  # Default threshold
+
+#if st.button("Calibrate Threshold"):
+#    new_threshold = calibrate_threshold(strong_model_pct)
+#    if new_threshold is not None:
+#        threshold = new_threshold
+#        st.session_state['threshold'] = threshold
+#        st.write(f"Calibrated threshold: {threshold}")
+#    else:
+#        st.warning("Using default threshold.")
+#else:
+#    if 'threshold' in st.session_state:
+#        threshold = st.session_state['threshold']
+
+
 if 'controller' not in st.session_state:
-    st.session_state['controller'] = init_controller(threshold)
+    st.session_state['controller'] = init_controller()
 
-controller =  st.session_state.get('controller',None) #If it's still None just keep it that way.
-
+controller =  st.session_state.get('controller',None) 
 
 # Function to calculate cost
 def calculate_cost(model_name, input_tokens, output_tokens):
@@ -131,7 +132,7 @@ def calculate_cost(model_name, input_tokens, output_tokens):
         return 0
 
 # Function to get a response from the RouteLLM router
-def get_response(prompt, router, threshold):
+def get_response(prompt, router):
     try:
         start_time = time.time()
         # Added a check to make sure controller is not None before attemping to use it.
@@ -140,7 +141,7 @@ def get_response(prompt, router, threshold):
             return "RouteLLM Unavailable", "N/A", 0, 0, 0, 0, "N/A"
 
         response = controller.chat.completions.create(
-            model=f"router-{router}-{threshold}",
+            model=f"router-{router}-0.11593",
             messages=[{"role": "user", "content": prompt}]
         )
         st.write("Full response:", response)
@@ -156,7 +157,7 @@ def get_response(prompt, router, threshold):
         return f"Error: {str(e)}", None, None, None, None, None, None
 
 # Function to get a response from a specific model (e.g., GPT-4o, Claude)
-def get_response_from_model(prompt, model_name, threshold):
+def get_response_from_model(prompt, model_name):
     try:
         start_time = time.time()
         if model_name == "gpt-4o":
@@ -188,7 +189,7 @@ def get_response_from_model(prompt, model_name, threshold):
         elif model_name.startswith("RouteLLM Router"):
             if controller is not None:  # Check if controller is initialized
                 router = "mf" if model_name.endswith("(MF)") else "bert"
-                return get_response(prompt, router, threshold)
+                return get_response(prompt, router)
             else:
                 st.error("RouteLLM Controller failed to initialize. Cannot use RouteLLM Router.")
                 return "RouteLLM unavailable", model_name, 0, 0, 0, 0, None
@@ -213,7 +214,7 @@ if st.button("Get Response"):
         columns = st.columns(len(selected_models))
 
         for i, model in enumerate(selected_models):
-            response, model_used, latency, cost, input_tokens, output_tokens, selected_model = get_response_from_model(prompt, model, threshold)
+            response, model_used, latency, cost, input_tokens, output_tokens, selected_model = get_response_from_model(prompt, model_name)
             if response is not None and model_used is not None:
                 columns[i].write(f"Response from {model_used}:")
                 columns[i].write(response)
@@ -241,5 +242,5 @@ if st.checkbox("Show Model Details"):
         st.write(f"Cost per Prompt: {details['cost_per_prompt']}")
         st.write(f"Cost per Completion: {details['cost_per_completion']}")
         st.write("----")
+st.write(f"Current threshold: 0.11593")
 
-st.write(f"Current threshold: {threshold}")
