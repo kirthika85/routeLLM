@@ -85,7 +85,7 @@ def get_response_from_model(prompt, model_name):
             input_tokens = len(prompt)
             output_tokens = len(response.choices[0].message.content)
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
-            return response.choices[0].message.content, model_name, latency, cost,input_tokens, output_tokens
+            return response.choices[0].message.content, model_name, latency, cost,input_tokens, output_tokens,None
         elif model_name == "claude-3-haiku-20240307":
             client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
             message = client.messages.create(
@@ -98,7 +98,7 @@ def get_response_from_model(prompt, model_name):
             input_tokens = len(prompt)
             output_tokens = len(message.content)
             cost = calculate_cost(model_name, len(prompt), len(message.content))
-            return message.content, model_name, latency, cost,input_tokens, output_tokens
+            return message.content, model_name, latency, cost,input_tokens, output_tokens,None
         elif model_name.startswith("RouteLLM Router"):
             router = "mf" if model_name.endswith("(MF)") else "bert"
             return get_response(prompt, router)
@@ -106,7 +106,9 @@ def get_response_from_model(prompt, model_name):
             end_time = time.time()
             latency = end_time - start_time
             cost = 0
-            return f"Simulated response from {model_name}: {prompt} processed.", model_name, latency, cost
+            input_tokens = len(prompt)
+            output_tokens = len(message.content)
+            return f"Simulated response from {model_name}: {prompt} processed.", model_name, latency, cost,input_tokens,output_tokens,None
     except Exception as e:
         return f"Error: {e}", None, None, None
 
