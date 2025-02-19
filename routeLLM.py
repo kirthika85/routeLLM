@@ -62,7 +62,7 @@ def get_response(prompt, router):
         end_time = time.time()
         latency = end_time - start_time
         input_tokens = len(prompt)
-        output_tokens = len(prompt)
+        output_tokens = len(response.choices[0]["message"]["content"])
         cost = calculate_cost(f"RouteLLM Router ({router.upper()})", len(prompt), len(response.choices[0]["message"]["content"]))
         selected_model = response.choices[0].message.metadata.get('selected_model', 'Unknown')
         return response.choices[0]["message"]["content"], f"RouteLLM Router ({router.upper()})", latency, cost,input_tokens,output_tokens,None
@@ -98,7 +98,7 @@ def get_response_from_model(prompt, model_name):
             input_tokens = len(prompt)
             output_tokens = len(response.choices[0].message.content)
             cost = calculate_cost(model_name, len(prompt), len(response.choices[0].message.content))
-            return message.content, model_name, latency, cost,input_tokens, output_tokens,None
+            return response.choices[0].message.content, model_name, latency, cost,input_tokens, output_tokens,None
         elif model_name.startswith("RouteLLM Router"):
             router = "mf" if model_name.endswith("(MF)") else "bert"
             return get_response(prompt, router)
@@ -107,7 +107,7 @@ def get_response_from_model(prompt, model_name):
             latency = end_time - start_time
             cost = 0
             input_tokens = len(prompt)
-            output_tokens = len(message.content)
+            output_tokens = len(response.choices[0].message.content)
             return f"Simulated response from {model_name}: {prompt} processed.", model_name, latency, cost,input_tokens,output_tokens,None
     except Exception as e:
         return f"Error: {e}", None, None, None
