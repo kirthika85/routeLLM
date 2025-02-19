@@ -19,7 +19,7 @@ if openai.api_key is None:
 
 # Define models and parameters
 models = {
-    "gpt-3.5-turbo": {"vendor": "openai", "cost_per_prompt": 5e-6, "cost_per_completion": 1.5e-5,
+    "gpt-3.5-turbo": {"vendor": "openai", "cost_per_prompt": 5e-6, "cost_per_completion": 1.5e-5},
     "gpt-4o": {"vendor": "openai", "cost_per_prompt": 5e-6, "cost_per_completion": 1.5e-5},
     "RouteLLM Router (MF)": {"vendor": "routellm", "cost_per_prompt": 0, "cost_per_completion": 0},
     "RouteLLM Router (BERT)": {"vendor": "routellm", "cost_per_prompt": 0, "cost_per_completion": 0},
