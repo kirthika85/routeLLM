@@ -32,51 +32,6 @@ models = {
 # Streamlit App
 st.title("LLM Router Application")
 
-# Remove Calibration Code
-"""
-def calibrate_threshold(strong_model_pct):
-    config_file = "config.example.yaml"
-
-    if not os.path.exists(config_file):
-        st.error(f"Error: Configuration file '{config_file}' not found in the current directory.")
-        return None
-    
-    try:
-        command = f"python -m routellm.calibrate_threshold --routers mf --strong-model-pct {strong_model_pct} --config {config_file}"
-        st.write(f"Running calibration command: {command}")  #DEBUG
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-
-        st.write("Command output:")
-        st.code(result.stdout)
-
-        if result.returncode != 0:
-            st.error(f"Calibration failed.  Check Streamlit Logs for details.")
-            st.error(f"Stderr: {result.stderr}")
-            return None
-
-        output = result.stdout.strip()
-        # Try to find a float in the output
-        match = re.search(r'\d+\.\d+', output)
-        if match:
-            threshold = float(match.group())
-            return threshold
-        else:
-            st.error(f"Could not find a threshold value in the output.")
-            return None
-
-    except Exception as e:
-        st.error(f"Calibration error: {str(e)}")
-        return None
-
-
-#strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
-
-#if st.button("Calibrate Threshold"):
-#    calibrate_threshold(strong_model_pct)
-#    st.write(f"Calibrated threshold: {threshold}")
-
-
-"""
 @st.cache_resource
 def init_controller():
     try:
@@ -99,19 +54,6 @@ def init_controller():
 
 #strong_model_pct = st.slider("Percentage of strong model usage", 0.0, 1.0, 0.5, 0.01)
 threshold = 0.11593  # Default threshold
-
-#if st.button("Calibrate Threshold"):
-#    new_threshold = calibrate_threshold(strong_model_pct)
-#    if new_threshold is not None:
-#        threshold = new_threshold
-#        st.session_state['threshold'] = threshold
-#        st.write(f"Calibrated threshold: {threshold}")
-#    else:
-#        st.warning("Using default threshold.")
-#else:
-#    if 'threshold' in st.session_state:
-#        threshold = st.session_state['threshold']
-
 
 if 'controller' not in st.session_state:
     st.session_state['controller'] = init_controller()
